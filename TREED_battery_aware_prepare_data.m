@@ -122,22 +122,36 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.operators = [dataObj.operators repmat('<', 1, size(con_d, 1))];
     dataObj.con_d_size = size(con_d, 1);
     
-    %% Constraint \sum^{M}_{j=1} \lambda_{ij} <= w^{\text{tasks}}_i(e)
-    con_e = zeros(dataObj.N, dataObj.numOfVars);
+    %% Constraint \sum^N_{i = 1}\lambda_{ij} >= 1 (e)
+    con_e = zeros(dataObj.M, dataObj.numOfVars);
+    for j = 1:dataObj.M
+        row = zeros(1, dataObj.numOfVars);
+        for ij = 0:dataObj.M:dataObj.N * dataObj.M - 1
+            row(j + ij) = 1; 
+        end
+        con_e(j) = row;
+    end
+    dataObj.A = [dataObj.A; con_e];
+    dataObj.b = [dataObj.b; ones(size(con_e, 1), 1)];
+    dataObj.operators = [dataObj.operators repmat('>', 1, size(con_e, 1))];
+    dataObj.con_e_size = size(con_e, 1);
+    
+    %% Constraint \sum^{M}_{j=1} \lambda_{ij} <= w^{\text{tasks}}_i(f)
+    con_f = zeros(dataObj.N, dataObj.numOfVars);
     ctr = 1;
     for i = 0:dataObj.M:dataObj.N * dataObj.M - 1
         row = zeros(1, dataObj.numOfVars);
         for j = 1:dataObj.M
             row(1, i+j) = 1;            
         end
-        con_e(ctr, :) = row;
+        con_f(ctr, :) = row;
         ctr = ctr + 1;
     end
     
-    dataObj.A = [dataObj.A; con_e];
+    dataObj.A = [dataObj.A; con_f];
     dataObj.b = [dataObj.b; dataObj.workers_max_tasks'];
-    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_e, 1))];
-    dataObj.con_e_size = size(con_e, 1);
+    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_f, 1))];
+    dataObj.con_f_size = size(con_f, 1);
     
     %% Constraint (ee) 
     dataObj.max_energy = 3;%was 1
@@ -176,7 +190,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.operators = [dataObj.operators repmat('<', 1, size(con_ee, 1))];
     dataObj.con_e_size = size(con_ee, 1);
 
-    %% Constraint (f) RHS
+    %% Constraint (g) RHS
     
     dataObj.ub = zeros(1, dataObj.N * dataObj.M);
     dataObj.lb = zeros(1, dataObj.N * dataObj.M);
