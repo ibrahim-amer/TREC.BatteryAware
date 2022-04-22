@@ -1,7 +1,7 @@
 function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstraints, allow_debug)
     fprintf('#####[TREED_MILP_Solution_Gurobi] started!. N = %d, M = %d#####\n', dataObj.N, dataObj.M);
     %% Problem solution
-    decVars = cell(1, dataObj.N * dataObj.M + dataObj.M);
+    decVars = cell(1, dataObj.numOfVars);
     c1 = 1;
     %Prepare binary decision variables ,i.e., lambdas
     for i = 1:dataObj.N
@@ -15,10 +15,9 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
     %decVars = {decvarBinary{:}, decvarCont{:}};
     %names = cat(1, decVars{:});
     names = reshape(decVars', [1, dataObj.numOfVars]);
-    model.varnames = names;
+    model.varnames = names';
     
     % Set objective:
-    dataObj.objectiveFunction = [zeros(1, dataObj.N .* dataObj.M)];
     model.obj = dataObj.objectiveFunction;
     model.modelsense = 'min';
     
@@ -30,7 +29,7 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
 
     
     % Decision variables types
-    model.vtype = strcat(repmat('B', 1, dataObj.N .* dataObj.M), repmat('C', 1, dataObj.M));
+    model.vtype = repmat('B', 1, dataObj.numOfVars);
        
 
     
@@ -104,6 +103,18 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
         result.optimalVal = output.objval;
         result.allConstraints = zeros(size(dataObj.A, 1), 1);
         result.debug = [];
+        %% Calculate number of replicas per task
+        result.stats.replicas_per_task = zeros(1, dataObj.M);
+        for j = 1:dataObj.M
+            rep_count = 0;
+            for ij = j:dataObj.M:dataObj.N * dataObj.M
+                if (result.x(ij) == 1)
+                    rep_count = rep_count + 1;
+                end
+            end
+            result.stats.replicas_per_task(j) = rep_count;
+        end
+        %% Check Constraints
         if checkConstraints
             ctr = 1;
             for i=1:size(dataObj.A, 1)

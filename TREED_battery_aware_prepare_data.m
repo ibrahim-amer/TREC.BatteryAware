@@ -25,7 +25,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     end
     %Reliablity level threshold
     if (~isfield(dataObj, "rel_epsilon"))
-        dataObj.rel_epsilon = 2;
+        dataObj.rel_epsilon = 0.3;
     end
     if (~isfield(dataObj, "wrokers_freqs"))
         dataObj.worker_CPU_FromVal = 1e9;
@@ -145,12 +145,13 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     con_b = zeros(dataObj.N * dataObj.M, dataObj.numOfVars);
     con_b_bounds = zeros(dataObj.N * dataObj.M, 1);
     ctr = 1;
-    for i = 1:dataObj.N
+    for i = 0:dataObj.N - 1
         for j = 1:dataObj.M
             row = zeros(1, dataObj.numOfVars);
-            row(i + j - 1) = 1 .* dataObj.wrokers_freqs(i);
+            row(((i * dataObj.M) + j)) = 1 .* dataObj.wrokers_freqs(i + 1);
             con_b(ctr, :) = row;
             con_b_bounds(ctr, :) = dataObj.tasks_CPU_req(j);
+            ctr = ctr + 1;
         end
     end
     dataObj.A = [dataObj.A; con_b];
@@ -170,7 +171,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
             ctr = ctr + 1;
         end
     end
-    con_c = zeros(dataObj.N * dataObj.M, dataObj.numOfVars);
+    con_c = zeros(dataObj.N, dataObj.numOfVars);
     ctr = 1;
     for i = 0:dataObj.M:dataObj.N * dataObj.M - 1
         row = zeros(1, dataObj.numOfVars);
@@ -181,13 +182,11 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         ctr = ctr + 1;
     end
     
-    con_c_bounds = zeros(dataObj.N * dataObj.M, 1);
+    con_c_bounds = zeros(dataObj.N, 1);
     ctr = 1;
     for i = 1:dataObj.N
-        for j = 1:dataObj.M
-            con_c_bounds(ctr, :) = dataObj.max_energies(i);
-            ctr = ctr + 1;
-        end
+        con_c_bounds(ctr, :) = dataObj.max_energies(i);
+        ctr = ctr + 1;
     end
     
     dataObj.A = [dataObj.A; con_c];
@@ -206,7 +205,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     end
     dataObj.A = [dataObj.A; con_d];
     dataObj.b = [dataObj.b;  ones(dataObj.M, 1) .* dataObj.rel_epsilon];
-    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_d, 1))];
+    dataObj.operators = [dataObj.operators repmat('>', 1, size(con_d, 1))];
     dataObj.con_d_size = size(con_d, 1); % M
     
     
@@ -283,6 +282,15 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.operators = [dataObj.operators repmat('>', 1, dataObj.N * dataObj.M)];
     dataObj.bounds_size = size(2 * lambdasBounds, 1); % N * M * 2
     
-    %%
+    %% Objective function
+    dataObj.workers_tasks_diff = zeros(1, dataObj.numOfVars);
+    ctr = 1;
+    for i = 1:dataObj.N
+        for j = 1:dataObj.M
+            dataObj.workers_tasks_diff(ctr) = dataObj.wrokers_freqs(i) - dataObj.tasks_CPU_req(j);
+            ctr = ctr + 1;
+        end
+    end
+    dataObj.objectiveFunction = dataObj.workers_tasks_diff;
 end
 
