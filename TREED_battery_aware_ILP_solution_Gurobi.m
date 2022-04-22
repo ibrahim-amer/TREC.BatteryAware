@@ -6,15 +6,10 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
     %Prepare binary decision variables ,i.e., lambdas
     for i = 1:dataObj.N
         for j = 1:dataObj.M
-            decVars{c1} = strcat('y', num2str(i), '_', num2str(j));
+            decVars{c1} = strcat('x', num2str(i), '_', num2str(j));
             c1 = c1 + 1;
         end
     end
-    %Prepare continous decision variables ,i.e., lambdas
-    for i = 1:dataObj.M
-        decVars{c1} = strcat('x', num2str(i));
-        c1 = c1 + 1;
-     end
     
     
     %decVars = {decvarBinary{:}, decvarCont{:}};
@@ -23,9 +18,9 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
     model.varnames = names;
     
     % Set objective:
-    dataObj.objectiveFunction = [zeros(1, dataObj.N .* dataObj.M) ones(1, dataObj.M)];
+    dataObj.objectiveFunction = [zeros(1, dataObj.N .* dataObj.M)];
     model.obj = dataObj.objectiveFunction;
-    model.modelsense = 'max';
+    model.modelsense = 'min';
     
     % Linear constraints
     model.A = sparse(dataObj.A);

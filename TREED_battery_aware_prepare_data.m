@@ -20,32 +20,36 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.controller_bandwidth = 10e6;
     dataObj.bandwidth_per_worker = dataObj.controller_bandwidth ./ dataObj.N;
     %Computation model parameters: Kappa 
-    if (isempty(dataObj.kappa))
+    if (~isfield(dataObj, "kappa"))
         dataObj.kappa = 1e-29;
     end
-    if (isempty(dataObj.wrokers_freqs))
+    %Reliablity level threshold
+    if (~isfield(dataObj, "rel_epsilon"))
+        dataObj.rel_epsilon = 2;
+    end
+    if (~isfield(dataObj, "wrokers_freqs"))
         dataObj.worker_CPU_FromVal = 1e9;
         dataObj.worker_CPU_ToVal = 4e9;
         dataObj.wrokers_freqs = dataObj.worker_CPU_FromVal + (dataObj.worker_CPU_ToVal - dataObj.worker_CPU_FromVal) * rand(1, dataObj.N);  % size  = N
         dataObj.wrokers_freqs = round(dataObj.wrokers_freqs, 2);
     end
     %Workers maximum number of tasks
-    if (isempty(dataObj.workers_max_tasks))
+    if (~isfield(dataObj, "workers_max_tasks"))
         dataObj.worker_max_tasks_fromval = 1;
         dataObj.worker_max_tasks_toval = 3;
         dataObj.workers_max_tasks = dataObj.worker_max_tasks_fromval + (dataObj.worker_max_tasks_toval - dataObj.worker_max_tasks_fromval) * rand(1, dataObj.N);  % size  = N
         dataObj.workers_max_tasks = round(dataObj.workers_max_tasks);
     end
     %Workers distance from the controller
-    if (isempty(dataObj.workers_distances))
+    if (~isfield(dataObj, "workers_distances"))
         dataObj.worker_distances_fromval = 5;
         dataObj.worker_distances_toval = 50;
         dataObj.workers_distances = dataObj.worker_distances_fromval + (dataObj.worker_distances_toval - dataObj.worker_distances_fromval) * rand(1, dataObj.N);  % size  = N
         dataObj.workers_distances = round(dataObj.workers_distances);
     end
     %Workers Rayleigh coefficient
-    if (isempty(dataObj.workers_rayleigh))
-        dataObj.workers_rayleigh = exprnd(0.5, [1, dataObj.N]);
+    if (~isfield(dataObj, "workers_rayleigh"))
+        dataObj.workers_rayleigh = exprnd(1, [1, dataObj.N]); %mu = 1 -->unit mean
     end
     %Workers channel gain
     dataObj.workers_channel_gain = (dataObj.workers_distances .^ -dataObj.path_loss_exp) .* dataObj.workers_rayleigh;
@@ -55,33 +59,36 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     %Data rate
     dataObj.workers_data_rates = dataObj.bandwidth_per_worker .* log2(1 + dataObj.SNR); 
     
-    %Workers reliability
-    if (isempty(dataObj.workers_max_batt_cap))
-        dataObj.worker_battery_fromval = 0;
-        dataObj.worker_battery_toval = 1;
-        dataObj.workers_battery_caps = dataObj.worker_battery_fromval + (dataObj.worker_battery_toval - dataObj.worker_battery_fromval) * rand(1, dataObj.N);  % size  = N
-        dataObj.workers_max_batt_cap = max(dataObj.workers_battery_cap);
-    end
+    %Workers hazard rates
+     if (~isfield(dataObj, "workers_hazard_rates"))
+        dataObj.worker_hazzard_rate_fromval = 0.001;
+        dataObj.worker_hazzard_rate_toval = 0.5;
+        dataObj.workers_hazard_rates = dataObj.worker_hazzard_rate_fromval + (dataObj.worker_hazzard_rate_toval - dataObj.worker_hazzard_rate_fromval) * rand(1, dataObj.N);  % size  = N
+        %dataObj.workers_hazard_rates = round(dataObj.workers_hazard_rates);
+     end
     
+     %Reliability probability function
+     rel_prop_t = @(beta, t) exp(-beta .* t);
+          
     
     %Tasks' Processing Density
-    if (isempty(dataObj.tasks_pdensity))
+    if (~isfield(dataObj, "tasks_pdensity"))
         dataObj.task_pdensity_fromVal = 1e2;
-        dataObj.task_pdensity_toVal = 10e2;
+        dataObj.task_pdensity_toVal = 5e2;
         dataObj.tasks_pdensity = dataObj.task_pdensity_fromVal + (dataObj.task_pdensity_toVal - dataObj.task_pdensity_fromVal) * rand(1, dataObj.M);  % size  = M
         dataObj.tasks_pdensity = round(dataObj.tasks_pdensity, 2);
     end
     
     %Tasks data size
-    if (isempty(dataObj.tasks_dataSize))
+    if (~isfield(dataObj, "tasks_dataSize"))
         dataObj.task_dataSize_fromVal = 1e6;
-        dataObj.task_dataSize_toVal = 50e6;
+        dataObj.task_dataSize_toVal = 20e6;
         dataObj.tasks_dataSize = dataObj.task_dataSize_fromVal + (dataObj.task_dataSize_toVal - dataObj.task_dataSize_fromVal) * rand(1, dataObj.M);  % size  = M
         dataObj.tasks_dataSize = round(dataObj.tasks_dataSize, 2);
     end
     
     %Tasks CPU requirement
-    if (isempty(dataObj.tasks_CPU_req))
+    if (~isfield(dataObj, "tasks_CPU_req"))
         dataObj.task_CPU_fromVal = 1;
         dataObj.task_CPU_toVal = 2;
         dataObj.tasks_CPU_req = dataObj.task_CPU_fromVal + (dataObj.task_CPU_toVal - dataObj.task_CPU_fromVal) * rand(1, dataObj.M);  % size  = M
@@ -89,9 +96,9 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     end
     
     %Tasks deadlines - uniformly distributed
-    if (isempty(dataObj.tasks_deadlines))
-        dataObj.task_deadline_fromVal = 20;%was 5
-        dataObj.task_deadline_toVal = 30;%was 20
+    if (~isfield(dataObj, "tasks_deadlines"))
+        dataObj.task_deadline_fromVal = 3;%was 5
+        dataObj.task_deadline_toVal = 4;%was 20
         dataObj.tasks_deadlines = dataObj.task_deadline_fromVal + (dataObj.task_deadline_toVal - dataObj.task_deadline_fromVal) * rand(1, dataObj.M);  % size  = M
         dataObj.tasks_deadlines = round(dataObj.tasks_deadlines, 2);
     end
@@ -99,14 +106,18 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     %Computation delays
     tasks_specs = dataObj.tasks_pdensity .* dataObj.tasks_dataSize; % vectorSize = M
     dataObj.tasks_comp_delays = zeros(1, dataObj.numOfVars);
+    ctr = 1;
     for i=1:dataObj.N
-        dataObj.tasks_comp_delays(i) = tasks_specs ./ dataObj.wrokers_freqs(i);
+        dataObj.tasks_comp_delays(ctr:ctr+dataObj.M - 1) = tasks_specs ./ dataObj.wrokers_freqs(i);
+        ctr = ctr + dataObj.M;
     end
     
     %Communication delays
     dataObj.tasks_comm_delays = zeros(1, dataObj.numOfVars);
+    ctr = 1;
     for i=1:dataObj.N
-        dataObj.tasks_comm_delays(i) = (dataObj.tasks_dataSize ./ dataObj.workers_data_rates(i));
+        dataObj.tasks_comm_delays(ctr:ctr+dataObj.M - 1) = (dataObj.tasks_dataSize ./ dataObj.workers_data_rates(i));
+        ctr = ctr + dataObj.M;
     end
     
     dataObj.tasks_total_delays = dataObj.tasks_comp_delays + dataObj.tasks_comm_delays;
@@ -114,6 +125,16 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     %max_delay = task_dataSize_toVal * task_pdensity_toVal / worker_CPU_FromVal;
     %dataObj.tasks_comp_delays = dataObj.tasks_comp_delays / max_delay;
     
+    %Workers reliability
+    dataObj.workers_tasks_rel_prop = zeros(1, dataObj.numOfVars);
+    dataObj.workers_tasks_rel_prop = [];
+    ctr = 1;
+    for i=1:dataObj.N
+        for j=1:dataObj.M
+            dataObj.workers_tasks_rel_prop(ctr) = rel_prop_t(dataObj.workers_hazard_rates(i), dataObj.tasks_deadlines(j));
+            ctr = ctr + 1;
+        end
+    end
     
     
     %% Preparing constraints matrix A 
@@ -135,78 +156,9 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.A = [dataObj.A; con_b];
     dataObj.b = [dataObj.b; con_b_bounds];
     dataObj.operators = [dataObj.operators repmat('>', 1, size(con_b, 1))];
-    dataObj.con_b_size = size(con_b, 1);
+    dataObj.con_b_size = size(con_b, 1); %N * M
     
-    
-    %% Constraint \sum^N_{i =1} w^{\text{cap}}_i x_{ij} >= w^{\text{cap}}_{\max} (c)
-    con_c = zeros(dataObj.M, dataObj.numOfVars);
-    con_c_bounds = zeros(dataObj.M, 1);
-    ctr = 1;
-    for j = 1:dataObj.M
-        row = zeros(1, dataObj.numOfVars);
-        for i = j:dataObj.M:dataObj.N * dataObj.M
-            row(i) = dataObj.workers_battery_caps(i / dataObj.max_batt_cap);
-            con_c_bounds(ctr) = dataObj.workers_max_batt_cap;
-        end
-        con_c(j) = row;
-    end
-    dataObj.A = [dataObj.A; con_c];
-    dataObj.b = [dataObj.b; con_c_bounds];
-    dataObj.operators = [dataObj.operators repmat('>', 1, size(con_c, 1))];
-    dataObj.con_c_size = size(con_c, 1);
-    
-    %% Constraint \tau^{\text{comp}}_{ij} x_{ij} <=  t^{\text{deadline}}_j (d)
-    con_d = zeros(dataObj.N * dataObj.M, dataObj.numOfVars);
-    for i = 1:dataObj.N * dataObj.M
-        row = zeros(1, dataObj.N .* dataObj.M + dataObj.M);
-        row(i) = 1 .* dataObj.tasks_total_delays(i);
-        con_d(i, :) = row;
-    end
-    con_d_bounds = zeros(dataObj.N * dataObj.M, 1);
-    ctr = 1;
-    for i = 1:dataObj.N
-        for j = 1:dataObj.M
-            con_d_bounds(ctr, :) = dataObj.tasks_deadlines(j);
-            ctr = ctr + 1;
-        end
-    end
-    dataObj.A = [dataObj.A; con_d];
-    dataObj.b = [dataObj.b; con_d_bounds];
-    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_d, 1))];
-    dataObj.con_d_size = size(con_d, 1);
-    
-    %% Constraint \sum^N_{i = 1} x_{ij} >= 1 (e)
-    con_e = zeros(dataObj.M, dataObj.numOfVars);
-    for j = 1:dataObj.M
-        row = zeros(1, dataObj.numOfVars);
-        for ij = 0:dataObj.M:dataObj.N * dataObj.M - 1
-            row(j + ij) = 1; 
-        end
-        con_e(j) = row;
-    end
-    dataObj.A = [dataObj.A; con_e];
-    dataObj.b = [dataObj.b; ones(size(con_e, 1), 1)];
-    dataObj.operators = [dataObj.operators repmat('>', 1, size(con_e, 1))];
-    dataObj.con_e_size = size(con_e, 1);
-    
-    %% Constraint \sum^{M}_{j=1}  x_{ij} <= w^{\text{tasks}}_i(f)
-    con_f = zeros(dataObj.N, dataObj.numOfVars);
-    ctr = 1;
-    for i = 0:dataObj.M:dataObj.N * dataObj.M - 1
-        row = zeros(1, dataObj.numOfVars);
-        for j = 1:dataObj.M
-            row(1, i+j) = 1;            
-        end
-        con_f(ctr, :) = row;
-        ctr = ctr + 1;
-    end
-    
-    dataObj.A = [dataObj.A; con_f];
-    dataObj.b = [dataObj.b; dataObj.workers_max_tasks'];
-    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_f, 1))];
-    dataObj.con_f_size = size(con_f, 1);
-    
-    %% Constraint (ee) 
+    %% Constraint (c)  \sum^M_{j = 1}x_{ij} E^{\text{comp}}_{ij} \leq E^{\text{max}}_i
     dataObj.max_energy = 3;%was 1
     dataObj.max_energies = dataObj.max_energy .* ones(1, dataObj.N);%size N
     energy_task_specs_tmp = dataObj.kappa .* dataObj.tasks_dataSize .* dataObj.tasks_pdensity; %size M
@@ -218,32 +170,99 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
             ctr = ctr + 1;
         end
     end
-    con_ee = zeros(dataObj.N * dataObj.M, dataObj.numOfVars);
+    con_c = zeros(dataObj.N * dataObj.M, dataObj.numOfVars);
     ctr = 1;
     for i = 0:dataObj.M:dataObj.N * dataObj.M - 1
         row = zeros(1, dataObj.numOfVars);
         for j = 1:dataObj.M
             row(1, i+j) = 1;            
         end
-        con_ee(ctr, :) = row;
+        con_c(ctr, :) = row;
         ctr = ctr + 1;
     end
     
-    con_ee_bounds = zeros(dataObj.N * dataObj.M, 1);
+    con_c_bounds = zeros(dataObj.N * dataObj.M, 1);
     ctr = 1;
     for i = 1:dataObj.N
         for j = 1:dataObj.M
-            con_ee_bounds(ctr, :) = dataObj.max_energies(i);
+            con_c_bounds(ctr, :) = dataObj.max_energies(i);
             ctr = ctr + 1;
         end
     end
     
-    dataObj.A = [dataObj.A; con_ee];
-    dataObj.b = [dataObj.b;  con_ee_bounds];
-    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_ee, 1))];
-    dataObj.con_e_size = size(con_ee, 1);
+    dataObj.A = [dataObj.A; con_c];
+    dataObj.b = [dataObj.b;  con_c_bounds];
+    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_c, 1))];
+    dataObj.con_c_size = size(con_c, 1); %N * M
+    
+    %% Constraint (d) \sum^N_{i =1} x_{ij} R_i(\gamma^{\text{deadline}}_j)\geq \epsilon
+    con_d = zeros(dataObj.M, dataObj.numOfVars);
+    for j = 1:dataObj.M
+        row = zeros(1, dataObj.numOfVars);
+        for ij = j:dataObj.M:dataObj.N .* dataObj.M
+            row(ij) = dataObj.workers_tasks_rel_prop(ij);
+        end
+        con_d(j, :) = row;
+    end
+    dataObj.A = [dataObj.A; con_d];
+    dataObj.b = [dataObj.b;  ones(dataObj.M, 1) .* dataObj.rel_epsilon];
+    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_d, 1))];
+    dataObj.con_d_size = size(con_d, 1); % M
+    
+    
+    %% Constraint (e) \tau^{\text{comp}}_{ij} x_{ij} <=  t^{\text{deadline}}_j (e)
+    con_e = zeros(dataObj.N * dataObj.M, dataObj.numOfVars);
+    for i = 1:dataObj.N * dataObj.M
+        row = zeros(1, dataObj.numOfVars);
+        row(i) = 1 .* dataObj.tasks_total_delays(i);
+        con_e(i, :) = row;
+    end
+    con_e_bounds = zeros(dataObj.N * dataObj.M, 1);
+    ctr = 1;
+    for i = 1:dataObj.N
+        for j = 1:dataObj.M
+            con_e_bounds(ctr, :) = dataObj.tasks_deadlines(j);
+            ctr = ctr + 1;
+        end
+    end
+    dataObj.A = [dataObj.A; con_e];
+    dataObj.b = [dataObj.b; con_e_bounds];
+    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_e, 1))];
+    dataObj.con_e_size = size(con_e, 1); %N * M
+    
+    %% Constraint \sum^N_{i = 1} x_{ij} >= 1 (f)
+    con_f = zeros(dataObj.M, dataObj.numOfVars);
+    for j = 1:dataObj.M
+        row = zeros(1, dataObj.numOfVars);
+        for ij = 0:dataObj.M:dataObj.N * dataObj.M - 1
+            row(j + ij) = 1; 
+        end
+        con_f(j, :) = row;
+    end
+    dataObj.A = [dataObj.A; con_f];
+    dataObj.b = [dataObj.b; ones(size(con_f, 1), 1)];
+    dataObj.operators = [dataObj.operators repmat('>', 1, size(con_f, 1))];
+    dataObj.con_f_size = size(con_f, 1);% M
+    
+    %% Constraint \sum^{M}_{j=1}  x_{ij} <= w^{\text{tasks}}_i(g)
+    con_g = zeros(dataObj.N, dataObj.numOfVars);
+    ctr = 1;
+    for i = 0:dataObj.M:dataObj.N * dataObj.M - 1
+        row = zeros(1, dataObj.numOfVars);
+        for j = 1:dataObj.M
+            row(1, i+j) = 1;            
+        end
+        con_g(ctr, :) = row;
+        ctr = ctr + 1;
+    end
+    
+    dataObj.A = [dataObj.A; con_g];
+    dataObj.b = [dataObj.b; dataObj.workers_max_tasks'];
+    dataObj.operators = [dataObj.operators repmat('<', 1, size(con_g, 1))];
+    dataObj.con_g_size = size(con_g, 1);% N
+    
 
-    %% Constraint (g) RHS
+    %% Constraint (h) RHS
     
     dataObj.ub = zeros(1, dataObj.N * dataObj.M);
     dataObj.lb = zeros(1, dataObj.N * dataObj.M);
@@ -262,7 +281,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.A = [dataObj.A; lambdasBounds];
     dataObj.b = [dataObj.b; dataObj.lb(1, 1:dataObj.N * dataObj.M)'];
     dataObj.operators = [dataObj.operators repmat('>', 1, dataObj.N * dataObj.M)];
-    dataObj.bounds_size = size(2 * lambdasBounds, 1);
+    dataObj.bounds_size = size(2 * lambdasBounds, 1); % N * M * 2
     
     %%
 end
