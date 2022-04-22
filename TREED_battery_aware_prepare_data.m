@@ -25,7 +25,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     end
     %Reliablity level threshold
     if (~isfield(dataObj, "rel_epsilon"))
-        dataObj.rel_epsilon = 0.3;
+        dataObj.rel_epsilon = 0.2;
     end
     if (~isfield(dataObj, "wrokers_freqs"))
         dataObj.worker_CPU_FromVal = 1e9;
@@ -61,7 +61,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     
     %Workers hazard rates
      if (~isfield(dataObj, "workers_hazard_rates"))
-        dataObj.worker_hazzard_rate_fromval = 0.001;
+        dataObj.worker_hazzard_rate_fromval = 0.01;
         dataObj.worker_hazzard_rate_toval = 0.5;
         dataObj.workers_hazard_rates = dataObj.worker_hazzard_rate_fromval + (dataObj.worker_hazzard_rate_toval - dataObj.worker_hazzard_rate_fromval) * rand(1, dataObj.N);  % size  = N
         %dataObj.workers_hazard_rates = round(dataObj.workers_hazard_rates);
@@ -176,7 +176,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     for i = 0:dataObj.M:dataObj.N * dataObj.M - 1
         row = zeros(1, dataObj.numOfVars);
         for j = 1:dataObj.M
-            row(1, i+j) = 1;            
+            row(1, i+j) = dataObj.comp_energies(i+j);            
         end
         con_c(ctr, :) = row;
         ctr = ctr + 1;
