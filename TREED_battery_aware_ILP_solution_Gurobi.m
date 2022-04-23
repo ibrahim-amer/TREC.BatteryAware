@@ -29,7 +29,7 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
 
     
     % Decision variables types
-    model.vtype = repmat('B', 1, dataObj.numOfVars);
+    model.vtype = 'B';%repmat('B', 1, dataObj.numOfVars);
        
 
     

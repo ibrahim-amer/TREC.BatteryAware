@@ -25,13 +25,13 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     end
     %Reliablity level threshold
     if (~isfield(dataObj, "rel_epsilon"))
-        dataObj.rel_epsilon = 0.2;
+        dataObj.rel_epsilon = 0.8;
     end
-    if (~isfield(dataObj, "wrokers_freqs"))
+    if (~isfield(dataObj, "workers_freqs"))
         dataObj.worker_CPU_FromVal = 1e9;
         dataObj.worker_CPU_ToVal = 4e9;
-        dataObj.wrokers_freqs = dataObj.worker_CPU_FromVal + (dataObj.worker_CPU_ToVal - dataObj.worker_CPU_FromVal) * rand(1, dataObj.N);  % size  = N
-        dataObj.wrokers_freqs = round(dataObj.wrokers_freqs, 2);
+        dataObj.workers_freqs = dataObj.worker_CPU_FromVal + (dataObj.worker_CPU_ToVal - dataObj.worker_CPU_FromVal) * rand(1, dataObj.N);  % size  = N
+        %dataObj.workers_freqs = round(dataObj.workers_freqs, 2);
     end
     %Workers maximum number of tasks
     if (~isfield(dataObj, "workers_max_tasks"))
@@ -45,7 +45,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         dataObj.worker_distances_fromval = 5;
         dataObj.worker_distances_toval = 50;
         dataObj.workers_distances = dataObj.worker_distances_fromval + (dataObj.worker_distances_toval - dataObj.worker_distances_fromval) * rand(1, dataObj.N);  % size  = N
-        dataObj.workers_distances = round(dataObj.workers_distances);
+        %dataObj.workers_distances = round(dataObj.workers_distances);
     end
     %Workers Rayleigh coefficient
     if (~isfield(dataObj, "workers_rayleigh"))
@@ -76,7 +76,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         dataObj.task_pdensity_fromVal = 1e2;
         dataObj.task_pdensity_toVal = 5e2;
         dataObj.tasks_pdensity = dataObj.task_pdensity_fromVal + (dataObj.task_pdensity_toVal - dataObj.task_pdensity_fromVal) * rand(1, dataObj.M);  % size  = M
-        dataObj.tasks_pdensity = round(dataObj.tasks_pdensity, 2);
+        %dataObj.tasks_pdensity = round(dataObj.tasks_pdensity, 2);
     end
     
     %Tasks data size
@@ -84,15 +84,15 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         dataObj.task_dataSize_fromVal = 1e6;
         dataObj.task_dataSize_toVal = 20e6;
         dataObj.tasks_dataSize = dataObj.task_dataSize_fromVal + (dataObj.task_dataSize_toVal - dataObj.task_dataSize_fromVal) * rand(1, dataObj.M);  % size  = M
-        dataObj.tasks_dataSize = round(dataObj.tasks_dataSize, 2);
+        %dataObj.tasks_dataSize = round(dataObj.tasks_dataSize, 2);
     end
     
     %Tasks CPU requirement
     if (~isfield(dataObj, "tasks_CPU_req"))
-        dataObj.task_CPU_fromVal = 1;
-        dataObj.task_CPU_toVal = 2;
+        dataObj.task_CPU_fromVal = 1e9;
+        dataObj.task_CPU_toVal = 2e9;
         dataObj.tasks_CPU_req = dataObj.task_CPU_fromVal + (dataObj.task_CPU_toVal - dataObj.task_CPU_fromVal) * rand(1, dataObj.M);  % size  = M
-        dataObj.tasks_CPU_req = round(dataObj.tasks_dataSize, 2);
+        %dataObj.tasks_CPU_req = round(dataObj.tasks_dataSize, 2);
     end
     
     %Tasks deadlines - uniformly distributed
@@ -100,7 +100,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         dataObj.task_deadline_fromVal = 3;%was 5
         dataObj.task_deadline_toVal = 4;%was 20
         dataObj.tasks_deadlines = dataObj.task_deadline_fromVal + (dataObj.task_deadline_toVal - dataObj.task_deadline_fromVal) * rand(1, dataObj.M);  % size  = M
-        dataObj.tasks_deadlines = round(dataObj.tasks_deadlines, 2);
+        %dataObj.tasks_deadlines = round(dataObj.tasks_deadlines, 2);
     end
     
     %Computation delays
@@ -108,7 +108,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.tasks_comp_delays = zeros(1, dataObj.numOfVars);
     ctr = 1;
     for i=1:dataObj.N
-        dataObj.tasks_comp_delays(ctr:ctr+dataObj.M - 1) = tasks_specs ./ dataObj.wrokers_freqs(i);
+        dataObj.tasks_comp_delays(ctr:ctr+dataObj.M - 1) = tasks_specs ./ dataObj.workers_freqs(i);
         ctr = ctr + dataObj.M;
     end
     
@@ -136,6 +136,17 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         end
     end
     
+    %% Objective function
+    dataObj.workers_tasks_diff = zeros(1, dataObj.numOfVars);
+    ctr = 1;
+    for i = 1:dataObj.N
+        for j = 1:dataObj.M
+            dataObj.workers_tasks_diff(ctr) = dataObj.workers_freqs(i) - dataObj.tasks_CPU_req(j);
+            ctr = ctr + 1;
+        end
+    end
+    dataObj.objectiveFunction = dataObj.workers_tasks_diff;
+    
     
     %% Preparing constraints matrix A 
     dataObj.A = [];
@@ -148,9 +159,9 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     for i = 0:dataObj.N - 1
         for j = 1:dataObj.M
             row = zeros(1, dataObj.numOfVars);
-            row(((i * dataObj.M) + j)) = 1 .* dataObj.wrokers_freqs(i + 1);
+            row(((i * dataObj.M) + j)) = dataObj.workers_tasks_diff(ctr);%1 .* dataObj.workers_freqs(i + 1);
             con_b(ctr, :) = row;
-            con_b_bounds(ctr, :) = dataObj.tasks_CPU_req(j);
+            con_b_bounds(ctr, :) = 0;
             ctr = ctr + 1;
         end
     end
@@ -167,7 +178,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     ctr = 1;
     for i = 1:dataObj.N
         for j = 1:dataObj.M
-            dataObj.comp_energies(ctr) = energy_task_specs_tmp(j) .* dataObj.wrokers_freqs(i)^2;
+            dataObj.comp_energies(ctr) = energy_task_specs_tmp(j) .* dataObj.workers_freqs(i)^2;
             ctr = ctr + 1;
         end
     end
@@ -282,15 +293,6 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.operators = [dataObj.operators repmat('>', 1, dataObj.N * dataObj.M)];
     dataObj.bounds_size = size(2 * lambdasBounds, 1); % N * M * 2
     
-    %% Objective function
-    dataObj.workers_tasks_diff = zeros(1, dataObj.numOfVars);
-    ctr = 1;
-    for i = 1:dataObj.N
-        for j = 1:dataObj.M
-            dataObj.workers_tasks_diff(ctr) = dataObj.wrokers_freqs(i) - dataObj.tasks_CPU_req(j);
-            ctr = ctr + 1;
-        end
-    end
-    dataObj.objectiveFunction = dataObj.workers_tasks_diff;
+    
 end
 

@@ -19,8 +19,8 @@ function [dataObj] = TREED_battery_aware_slice_data(N, M, dataObj)
     dataObj.comp_energies = dataObj.comp_energies(1:N*M, :);
     %            a     b    c   d   e   f_ub  f_lb  g_ub   g_lb
     dataObj.con_b_size = N*M;
-    dataObj.con_c_size = N*M;
-    dataObj.con_d_size = M;
+    dataObj.con_c_size = N;
+    dataObj.con_d_size = 0;
     dataObj.con_e_size = N*M;
     dataObj.con_f_size = M;
     dataObj.con_g_size = N;

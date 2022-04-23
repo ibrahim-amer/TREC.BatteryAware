@@ -40,7 +40,7 @@ end
             result = struct();
             result.results = cell(1, number_of_simulations);
             result.stats = struct();
-            dataObj = TREED_battery_aware_slice_data(N, M, dataObj);
+            %dataObj = TREED_battery_aware_slice_data(N, M, dataObj);
             
             %result.random_policy = TREED_maximize_replicas_random_policy(dataObj, max_iter_random_policy);
             %result.baseline = TREED_maximize_replicas_baseline(dataObj);
