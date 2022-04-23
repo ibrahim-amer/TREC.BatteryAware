@@ -29,7 +29,7 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
 
     
     % Decision variables types
-    model.vtype = 'B';%repmat('B', 1, dataObj.numOfVars);
+    model.vtype = repmat('B', 1, dataObj.numOfVars);
        
 
     
@@ -103,6 +103,7 @@ function result = TREED_battery_aware_ILP_solution_Gurobi(dataObj, checkConstrai
         result.optimalVal = output.objval;
         result.allConstraints = zeros(size(dataObj.A, 1), 1);
         result.debug = [];
+        result.dataObj = dataObj;
         %% Calculate number of replicas per task
         result.stats.replicas_per_task = zeros(1, dataObj.M);
         for j = 1:dataObj.M

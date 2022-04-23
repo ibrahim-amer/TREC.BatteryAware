@@ -14,10 +14,21 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     end
     
     %Communication model parameters
-    dataObj.trans_power = 50 * 1e-3 %50 mWatt;
-    dataObj.path_loss_exp = 2;
-    dataObj.sigma_sq = 1e-11;
-    dataObj.controller_bandwidth = 10e6;
+    if (~isfield(dataObj, "trans_power"))
+        dataObj.trans_power = 50 * 1e-3 %50 mWatt;
+    end
+    if (~isfield(dataObj, "path_loss_exp"))
+        dataObj.path_loss_exp = 2;
+    end
+    
+    if (~isfield(dataObj, "sigma_sq"))
+        dataObj.sigma_sq = 1e-11;
+    end
+    
+    if (~isfield(dataObj, "controller_bandwidth"))
+        dataObj.controller_bandwidth = 10e6;
+    end
+    
     dataObj.bandwidth_per_worker = dataObj.controller_bandwidth ./ dataObj.N;
     %Computation model parameters: Kappa 
     if (~isfield(dataObj, "kappa"))
@@ -68,7 +79,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
      end
     
      %Reliability probability function
-     rel_prop_t = @(beta, t) exp(-beta .* t);
+     dataObj.rel_prop_t = @(beta, t) exp(-beta .* t);
           
     
     %Tasks' Processing Density
@@ -97,8 +108,8 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     
     %Tasks deadlines - uniformly distributed
     if (~isfield(dataObj, "tasks_deadlines"))
-        dataObj.task_deadline_fromVal = 3;%was 5
-        dataObj.task_deadline_toVal = 4;%was 20
+        dataObj.task_deadline_fromVal = 8;%was 5
+        dataObj.task_deadline_toVal = 10;%was 20
         dataObj.tasks_deadlines = dataObj.task_deadline_fromVal + (dataObj.task_deadline_toVal - dataObj.task_deadline_fromVal) * rand(1, dataObj.M);  % size  = M
         %dataObj.tasks_deadlines = round(dataObj.tasks_deadlines, 2);
     end
@@ -120,7 +131,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         ctr = ctr + dataObj.M;
     end
     
-    dataObj.tasks_total_delays = dataObj.tasks_comp_delays + dataObj.tasks_comm_delays;
+    dataObj.tasks_total_delays = (dataObj.tasks_comp_delays + dataObj.tasks_comm_delays) / 2;
     
     %max_delay = task_dataSize_toVal * task_pdensity_toVal / worker_CPU_FromVal;
     %dataObj.tasks_comp_delays = dataObj.tasks_comp_delays / max_delay;
@@ -131,7 +142,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     ctr = 1;
     for i=1:dataObj.N
         for j=1:dataObj.M
-            dataObj.workers_tasks_rel_prop(ctr) = rel_prop_t(dataObj.workers_hazard_rates(i), dataObj.tasks_deadlines(j));
+            dataObj.workers_tasks_rel_prop(ctr) = dataObj.rel_prop_t(dataObj.workers_hazard_rates(i), dataObj.tasks_deadlines(j));
             ctr = ctr + 1;
         end
     end
@@ -169,6 +180,8 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     dataObj.b = [dataObj.b; con_b_bounds];
     dataObj.operators = [dataObj.operators repmat('>', 1, size(con_b, 1))];
     dataObj.con_b_size = size(con_b, 1); %N * M
+    cond = (dataObj.objectiveFunction' == diag(dataObj.A(1:dataObj.con_b_size, :)));
+    assert(sum(cond) == length(cond), 'prepare_data: obj func not equal to constrain (b)');
     
     %% Constraint (c)  \sum^M_{j = 1}x_{ij} E^{\text{comp}}_{ij} \leq E^{\text{max}}_i
     dataObj.max_energy = 3;%was 1
