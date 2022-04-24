@@ -13,6 +13,10 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
         error('dataObj is not a struct!');
     end
     
+    if (~isfield(dataObj, 'max_energy'))
+        dataObj.max_energy = 2.1;%was 1
+    end
+    
     %Communication model parameters
     if (~isfield(dataObj, "trans_power"))
         dataObj.trans_power = 50 * 1e-3 %50 mWatt;
@@ -187,7 +191,7 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
     assert(sum(cond) == length(cond), 'prepare_data: obj func not equal to constrain (b)');
     
     %% Constraint (c)  \sum^M_{j = 1}x_{ij} E^{\text{comp}}_{ij} \leq E^{\text{max}}_i
-    dataObj.max_energy = 3;%was 1
+    
     dataObj.max_energies = dataObj.max_energy .* ones(1, dataObj.N);%size N
     energy_task_specs_tmp = dataObj.kappa .* dataObj.tasks_dataSize .* dataObj.tasks_pdensity; %size M
     dataObj.comp_energies = zeros(dataObj.N * dataObj.M, 1); %size M * N, 1
