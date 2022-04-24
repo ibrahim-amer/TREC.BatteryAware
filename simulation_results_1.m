@@ -3,10 +3,10 @@
 
 N_min = 50;
 N_max = 100;
-N_stepSize = 5;
+N_stepSize = 2;
 
 M_min = 5;
-M_max = 20;
+M_max = 30;
 M_stepSize = 1;
 
 number_of_simulations = 1;
@@ -29,7 +29,7 @@ result = TREED_battery_aware_simulation(N_min, N_max, N_stepSize, M_min, M_max, 
 N = ceil((N_max - N_min) ./ N_stepSize);
 M = ceil((M_max - M_min) ./ M_stepSize);
 n_vector = N_min:N_stepSize:N_max;
-m_vector = M_min:M_stepSize:M_max
+m_vector = M_min:M_stepSize:M_max;
 sim1 = struct();
 for n=1:N
     for m = 1:M
