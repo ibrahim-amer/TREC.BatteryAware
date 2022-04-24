@@ -79,7 +79,10 @@ function [dataObj] = TREED_battery_aware_prepare_data(dataObj)
      end
     
      %Reliability probability function
-     dataObj.rel_prop_t = @(beta, t) exp(-beta .* t);
+     if (~isfield(dataObj, "rel_prop_t"))
+         dataObj.rel_prop_t = @(beta, t) exp(-beta .* t);
+     end
+     
           
     
     %Tasks' Processing Density

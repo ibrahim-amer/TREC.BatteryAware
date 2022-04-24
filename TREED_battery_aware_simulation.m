@@ -57,6 +57,9 @@ end
                 if (strcmp(simulation.all_sims{sim}.status, 'OPTIMAL') || strcmp(simulation.all_sims{sim}.status, 'INTERRUPTED'))
                     simulation.stats.averageOptimalVal = simulation.stats.averageOptimalVal + simulation.all_sims{sim}.optimalVal;
                     simulation.stats.averageRuntime = simulation.stats.averageRuntime + simulation.all_sims{sim}.runtime;
+                else
+                    simulation.stats.averageOptimalVal = simulation.stats.averageOptimalVal + 0;
+                    simulation.stats.averageRuntime = simulation.stats.averageRuntime + 0;
                 end
             end
             if (strcmp(simulation.all_sims{sim}.status, 'OPTIMAL') || strcmp(simulation.all_sims{sim}.status, 'INTERRUPTED'))
