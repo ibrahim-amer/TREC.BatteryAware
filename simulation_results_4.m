@@ -4,8 +4,8 @@ N_min = 50;
 N_max = 100;
 N_stepSize = 10;
 
-M_min = 5;
-M_max = 30;
+M_min = 1;
+M_max = 15;
 M_stepSize = 1;
 
 number_of_simulations = 1;
@@ -104,6 +104,7 @@ for n=1:N
         try
             x = result1{n,m}.all_sims{1}.x;
             sim4.result1.rel_scores(n, m) = result1{n,m}.dataObj.workers_tasks_rel_prop * x;
+            sim4.result1.total_number_of_replicas(n, m) = sum(x);
             sim4.result1.Ms(n,m) = result1{n,m}.dataObj.M;
             x_axis = sim4.result1.Ms(n,m);
             y_axis = sim4.result1.rel_scores(n, m);
@@ -114,7 +115,7 @@ for n=1:N
             sim4.result2.Ms(n,m) = result2{n,m}.dataObj.M;
             sim4.result2.Ns(n,m) = result2{n,m}.dataObj.N;
             sim4.result2.rel_scores(n, m) = result2{n,m}.dataObj.workers_tasks_rel_prop * x(1:sim4.result2.Ms(n,m) * sim4.result2.Ns(n,m), :);
-            
+            sim4.result2.total_number_of_replicas(n, m) = sum(x(sim4.result2.Ms(n,m) * sim4.result2.Ns(n,m) + 1:end));
             
             x_axis = sim4.result2.Ms(n,m);
             y_axis = sim4.result2.rel_scores(n, m);
@@ -125,26 +126,53 @@ for n=1:N
         end
     end
 end
-%% Varying number of tasks and displaying the results against the reliability score
+%% Varying number of tasks and displaying the results against the reliability score for TRUE
 strresult1 = '';
 for n = N:N
-    for j = 1:M
+    for m = 1:M
+        x_axis = sim4.result1.Ms(n,m);
+        y_axis = sim4.result1.total_number_of_replicas(n, m);
+        strresult1 = strcat(strresult1, '(', num2str(x_axis),', ', num2str(y_axis), ')');
+    end
+end
+disp('%% Varying number of tasks and displaying the results against the reliability score TRUE');
+disp(strresult1);
+
+%% Varying number of tasks and displaying the results against the reliability score for TREED
+strresult1 = '';
+for n = N:N
+    for m = 1:M
+        x_axis = sim4.result2.Ms(n,m);
+        y_axis = sim4.result2.total_number_of_replicas(n, m);
+        strresult1 = strcat(strresult1, '(', num2str(x_axis),', ', num2str(y_axis), ')');
+    end
+end
+disp('%% Varying number of tasks and displaying the results against the reliability score TREED');
+disp(strresult1);
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Varying number of workers and displaying the results against the reliability score for TRUE
+strresult1 = '';
+for n = 1:N
+    for m = M:M
         x_axis = sim4.result1.Ms(n,m);
         y_axis = sim4.result1.rel_scores(n, m);
         strresult1 = strcat(strresult1, '(', num2str(x_axis),', ', num2str(y_axis), ')');
     end
 end
-disp('%% Varying number of tasks and displaying the results against the reliability score');
+disp('%% Varying number of workers and displaying the results against the reliability score for TRUE');
 disp(strresult1);
-%% Varying number of workers and displaying the results against the reliability score
+
+%% Varying number of workers and displaying the results against the reliability score for TREED
 strresult1 = '';
 for n = 1:N
-    for j = M:M
+    for m = M:M
         x_axis = sim4.result2.Ms(n,m);
         y_axis = sim4.result2.rel_scores(n, m);
         strresult1 = strcat(strresult1, '(', num2str(x_axis),', ', num2str(y_axis), ')');
     end
 end
-disp('%% Varying number of workers and displaying the results against the reliability score');
+disp('%% Varying number of workers and displaying the results against the reliability score for TREED');
 disp(strresult1);
+
 
