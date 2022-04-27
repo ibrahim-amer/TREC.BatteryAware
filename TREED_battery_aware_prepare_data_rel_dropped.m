@@ -117,6 +117,10 @@ function [dataObj] = TREED_battery_aware_prepare_data_rel_dropped(dataObj)
         %dataObj.tasks_deadlines = round(dataObj.tasks_deadlines, 2);
     end
     
+    if (~isfield(dataObj, 'delay_dividend'))
+        dataObj.delay_dividend = 10;
+    end
+    
     %Computation delays
     tasks_specs = dataObj.tasks_pdensity .* dataObj.tasks_dataSize; % vectorSize = M
     dataObj.tasks_comp_delays = zeros(1, dataObj.numOfVars);
@@ -134,7 +138,7 @@ function [dataObj] = TREED_battery_aware_prepare_data_rel_dropped(dataObj)
         ctr = ctr + dataObj.M;
     end
     
-    dataObj.tasks_total_delays = (dataObj.tasks_comp_delays + dataObj.tasks_comm_delays) / 2;
+    dataObj.tasks_total_delays = (dataObj.tasks_comp_delays + dataObj.tasks_comm_delays) / dataObj.delay_dividend;
     
     %max_delay = task_dataSize_toVal * task_pdensity_toVal / worker_CPU_FromVal;
     %dataObj.tasks_comp_delays = dataObj.tasks_comp_delays / max_delay;
