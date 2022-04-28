@@ -4,8 +4,8 @@ N_min = 100;
 N_max = 100;
 N_stepSize = 1;
 
-M_min = 1;
-M_max = 10;
+M_min = 10;
+M_max = 20;
 M_stepSize = 1;
 
 number_of_simulations = 1;
@@ -52,8 +52,8 @@ dataObj.workers_rayleigh = exprnd(1, [1, dataObj.N]); %mu = 1 -->unit mean
 
 %Workers hazard rates
 
-dataObj.worker_hazzard_rate_fromval = 0.08;
-dataObj.worker_hazzard_rate_toval = 0.7;
+dataObj.worker_hazzard_rate_fromval = 0.01;
+dataObj.worker_hazzard_rate_toval = 0.5;
 dataObj.workers_hazard_rates = dataObj.worker_hazzard_rate_fromval + (dataObj.worker_hazzard_rate_toval - dataObj.worker_hazzard_rate_fromval) * rand(1, dataObj.N);  % size  = N
 %dataObj.workers_hazard_rates = round(dataObj.workers_hazard_rates);
 
@@ -94,7 +94,7 @@ M = ceil((M_max - M_min + 1) ./ M_stepSize);
 n_vector = N_min:N_stepSize:N_max;
 m_vector = M_min:M_stepSize:M_max;
 
-epsilons =  0.8:0.2:1.2;
+epsilons =  1:0.4:2
 all_results = cell(1, length(epsilons));
 for eps = 1:length(epsilons)
 
@@ -116,12 +116,13 @@ plot3 = '';
 for eps = 1:length(epsilons)
     for m = 1:M
         try
+            current_m = all_results{eps}.result1{1,m}.dataObj.M;
             failure_percentage = 0.5;
             x1 = all_results{eps}.result1{1,m}.all_sims{1}.x;
             x2 = all_results{eps}.result2{1,m}.all_sims{1}.x;
             x3 = all_results{eps}.result3{1,m}.all_sims{1}.x;
             x3 = x3(1:(length(x3) - current_m));
-            current_m = all_results{eps}.result1{1,m}.dataObj.M;
+            
             
             x1_reshaped = reshape(x1, [current_m, N_max]);
             x2_reshaped = reshape(x2, [current_m, N_max]);
@@ -135,19 +136,33 @@ for eps = 1:length(epsilons)
             
             % Calculate failure probability
             failure_probs = 1 - all_results{eps}.result1{1,m}.dataObj.workers_tasks_rel_prop;
-            true_tasks_status = (x1_reshaped .* failure_probs) > failure_percentage;
-            true_RD_tasks_status = (x2_reshaped .* failure_probs) > failure_percentage;
-            mtreed_tasks_status = (x3_reshaped .* failure_probs) > failure_percentage;
+            reshaped_failure_probs = reshape(failure_probs, [current_m, N_max]);
+            true_tasks_fail_prob = (x1_reshaped .* reshaped_failure_probs) > failure_percentage;
+            true_RD_tasks_fail_prob = (x2_reshaped .* reshaped_failure_probs) > failure_percentage;
+            mtreed_tasks_fail_prob = (x3_reshaped .* reshaped_failure_probs) > failure_percentage;
             
-            true_nodes_failed = sum(true_tasks_status, 2);
-            true_RD_nodes_failed = sum(true_RD_tasks_status, 2);
-            mtreed_nodes_failed = sum(mtreed_tasks_status, 2);
+            true_nodes_failed = sum(true_tasks_fail_prob, 2);
+            true_RD_nodes_failed = sum(true_RD_tasks_fail_prob, 2);
+            mtreed_nodes_failed = sum(mtreed_tasks_fail_prob, 2);
+            
+            
+            true_actual_nodes = abs(true_nodes_failed - true_replicas);
+            true_RD_actual_nodes = abs(true_RD_nodes_failed - true_RD_replicas);
+            mtreed_actual_nodes = abs(mtreed_nodes_failed - mtreed_replicas);
+            
+            true_tasks_status = true_actual_nodes == 0;
+            true_RD_tasks_status = true_RD_actual_nodes == 0;
+            mtreed_tasks_status = mtreed_actual_nodes == 0;
             
             
             
-            true_percentage = sum((failure_probs' .* x1) > failure_percentage) ./ current_m;
-            true_RD_percentage = sum((failure_probs' .* x2) > failure_percentage) ./ current_m;
-            mtreed_percentage = sum((failure_probs' .* x3) > failure_percentage) ./ current_m;
+            true_percentage = sum(true_tasks_status) ./ current_m;
+            true_RD_percentage = sum(true_RD_tasks_status) ./ current_m;
+            mtreed_percentage = sum(mtreed_tasks_status) ./ current_m;
+            
+%             true_percentage = sum((failure_probs' .* x1) > failure_percentage) ./ current_m;
+%             true_RD_percentage = sum((failure_probs' .* x2) > failure_percentage) ./ current_m;
+%             mtreed_percentage = sum((failure_probs' .* x3) > failure_percentage) ./ current_m;
 
             plot1 = strcat(plot1, '(', num2str(current_m),', ', num2str(true_percentage), ')');
             plot2 = strcat(plot2, '(', num2str(current_m),', ', num2str(true_RD_percentage), ')');
@@ -160,6 +175,10 @@ disp(strcat('Percentage vs #Tasks, for epsilon = ', num2str(epsilons(eps))));
 disp(plot1);
 disp(plot2);
 disp(plot3);
+
+plot1 = '';
+plot2 = '';
+plot3 = '';
 disp('#########################################################');
 end
 
